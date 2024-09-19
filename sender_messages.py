@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
+import time
 
 from aiohttp import ClientSession
 from motor import motor_asyncio
@@ -59,8 +59,8 @@ class SenderMessages:
 
     def _get_collection_name(self) -> str:
         """Creates a unique name for the MongoDB collection using Moscow time."""
-        moscow_time = datetime.utcnow() + timedelta(hours=3)
-        return moscow_time.strftime('%d_%m_%Y__%H_%M_%S')
+        moscow_time = time.gmtime(time.time() + 3 * 60 * 60)
+        return time.strftime('%d_%m_%Y__%H_%M_%S', moscow_time)
 
     async def _send_messages(self, data: dict, chat_ids: list[int]) -> (int, int):
         """Starts the message sending process with logging."""
@@ -108,7 +108,7 @@ class SenderMessages:
         delivered, not_delivered = 0, 0
 
         for batch in batches:
-            batch_start_time = datetime.utcnow().timestamp()
+            batch_start_time = time.monotonic()
 
             results = await asyncio.gather(*batch, return_exceptions=True)
             for result in results:
@@ -117,7 +117,7 @@ class SenderMessages:
                 else:
                     delivered += 1
 
-            time_elapsed = datetime.utcnow().timestamp() - batch_start_time
+            time_elapsed = time.monotonic() - batch_start_time
             if time_elapsed < self._delay_between_batches:
                 await asyncio.sleep(self._delay_between_batches - time_elapsed)
 

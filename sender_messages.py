@@ -21,6 +21,7 @@ class SenderMessages:
         use_mongo: bool = True,
         mongo_uri: str = 'mongodb://localhost:27017',
         mongo_db: str = 'tg-bot-sender',
+        parse_mode: str = 'HTML'
     ):
         self._url_send_photo = self._url_template.format(token=token, method="sendPhoto")
         self._url_send_message = self._url_template.format(token=token, method="sendMessage")
@@ -30,6 +31,7 @@ class SenderMessages:
         self._use_mongo = use_mongo
         self._mongo_uri = mongo_uri
         self._mongo_db = mongo_db
+        self._parse_mode = parse_mode
         self._mongo_collection = None
         self._url = None
 
@@ -62,19 +64,19 @@ class SenderMessages:
                 item = {'type': 'photo', 'media': photo_token}
                 if i == 0:
                     item['caption'] = text
-                    item['parse_mode'] = 'HTML'
+                    item['parse_mode'] = self._parse_mode
                 media.append(item)
             data = {'media': json.dumps(media)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
         elif photo_tokens and len(photo_tokens) == 1:
             # Prepare data for sendPhoto
-            data = {'photo': photo_tokens[0], 'caption': text, 'parse_mode': 'HTML'}
+            data = {'photo': photo_tokens[0], 'caption': text, 'parse_mode': self._parse_mode}
             if reply_markup:
                 data['reply_markup'] = json.dumps(reply_markup)
         else:
             # Prepare data for sendMessage
-            data = {'text': text, 'parse_mode': 'HTML'}
+            data = {'text': text, 'parse_mode': self._parse_mode}
             if reply_markup:
                 data['reply_markup'] = json.dumps(reply_markup)
         return data

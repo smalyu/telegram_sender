@@ -23,7 +23,7 @@ In modern applications, especially those involving notifications or updates, sen
 
 **SenderMessages** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API.
+1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class, to control how text is parsed by Telegram.
 
 2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches (packs). Each batch contains a specified number of messages (`batch_size`).
 
@@ -43,7 +43,7 @@ In modern applications, especially those involving notifications or updates, sen
 
 - **Error Resilience**: Continues sending messages even if some fail, and logs errors for later review.
 
-- **Configurable**: Offers flexibility through parameters such as batch size, delay intervals, and MongoDB settings.
+- **Configurable**: Offers flexibility through parameters such as batch size, delay intervals, parse mode, and MongoDB settings.
 
 - **Optional Logging**: Allows enabling or disabling MongoDB logging based on your needs.
 
@@ -60,13 +60,14 @@ async def main():
     # Initialize the message sender
     sender = SenderMessages(
         token='YOUR_TELEGRAM_BOT_TOKEN',
-        batch_size=5,  # Send 5 messages concurrently
+        batch_size=30,  # Increased batch size to 30 messages concurrently
         delay_between_batches=1.5,  # 1.5-second delay between batches
-        use_mongo=False  # No MongoDB logging
+        use_mongo=False,  # No MongoDB logging
+        parse_mode='Markdown'  # Setting parse_mode to Markdown
     )
 
     # Message text
-    text = "Hello! This is a test message."
+    text = "*Hello!* This is a test message."
 
     # List of chat IDs
     chat_ids = [123456789, 987654321, 456123789]
@@ -92,13 +93,14 @@ async def main():
     # Initialize the message sender
     sender = SenderMessages(
         token='YOUR_TELEGRAM_BOT_TOKEN',
-        batch_size=3,  # Send 3 messages concurrently
+        batch_size=20,  # Send 20 messages concurrently
         delay_between_batches=2.0,  # 2-second delay between batches
-        use_mongo=True  # Log results in MongoDB
+        use_mongo=True,  # Log results in MongoDB
+        parse_mode='HTML'  # Using HTML as parse_mode
     )
 
     # Prepare the data
-    text = "Check out this beautiful photo!"
+    text = "Check out this <b>beautiful</b> photo!"
     photo_tokens = ["PHOTO_FILE_ID"]  # List containing a single Telegram file ID of the photo
     reply_markup = {
         "inline_keyboard": [

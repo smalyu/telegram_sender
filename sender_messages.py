@@ -24,6 +24,7 @@ class SenderMessages:
     ):
         self._url_send_photo = self._url_template.format(token=token, method="sendPhoto")
         self._url_send_message = self._url_template.format(token=token, method="sendMessage")
+        self._url_send_media_group = self._url_template.format(token=token, method="sendMediaGroup")
         self._batch_size = batch_size
         self._delay_between_batches = delay_between_batches
         self._use_mongo = use_mongo
@@ -36,25 +37,46 @@ class SenderMessages:
         self,
         text: str,
         chat_ids: list[int],
-        photo_token: str | None = None,
+        photo_tokens: list[str] | None = None,
         reply_markup: dict | None = None,
     ) -> (int, int):
         """Starts the message sending process."""
-        self._url = self._url_send_photo if photo_token else self._url_send_message
-        data = self._prepare_data(text, photo_token, reply_markup)
+        if photo_tokens and len(photo_tokens) > 1:
+            self._url = self._url_send_media_group
+        elif photo_tokens and len(photo_tokens) == 1:
+            self._url = self._url_send_photo
+        else:
+            self._url = self._url_send_message
+        data = self._prepare_data(text, photo_tokens, reply_markup)
         if self._use_mongo:
             collection_name = self._get_collection_name()
             self._mongo_collection = motor_asyncio.AsyncIOMotorClient(self._mongo_uri)[self._mongo_db][collection_name]
         return await self._send_messages(data, chat_ids)
 
-    def _prepare_data(self, text: str, photo_token: str | None, reply_markup: dict | None) -> dict:
+    def _prepare_data(self, text: str, photo_tokens: list[str] | None, reply_markup: dict | None) -> dict:
         """Prepares data for sending."""
-        data_field = 'caption' if photo_token else 'text'
-        data = {data_field: text, 'parse_mode': 'HTML'}
-        if photo_token:
-            data['photo'] = photo_token
-        if reply_markup:
-            data['reply_markup'] = json.dumps(reply_markup)
+        if photo_tokens and len(photo_tokens) > 1:
+            # Prepare data for sendMediaGroup
+            media = []
+            for i, photo_token in enumerate(photo_tokens):
+                item = {'type': 'photo', 'media': photo_token}
+                if i == 0:
+                    item['caption'] = text
+                    item['parse_mode'] = 'HTML'
+                media.append(item)
+            data = {'media': json.dumps(media)}
+            if reply_markup:
+                logger.warning("reply_markup is not supported in sendMediaGroup")
+        elif photo_tokens and len(photo_tokens) == 1:
+            # Prepare data for sendPhoto
+            data = {'photo': photo_tokens[0], 'caption': text, 'parse_mode': 'HTML'}
+            if reply_markup:
+                data['reply_markup'] = json.dumps(reply_markup)
+        else:
+            # Prepare data for sendMessage
+            data = {'text': text, 'parse_mode': 'HTML'}
+            if reply_markup:
+                data['reply_markup'] = json.dumps(reply_markup)
         return data
 
     def _get_collection_name(self) -> str:
@@ -90,15 +112,15 @@ class SenderMessages:
             async with session.post(self._url, data=data) as response:
                 response_json = await response.json()
 
-                if self._use_mongo and self._mongo_collection is not None:
-                    await self._mongo_collection.insert_one(response_json)
+            if self._use_mongo and self._mongo_collection is not None:
+                await self._mongo_collection.insert_one(response_json)
 
-                if response.status != 200:
-                    logger.error(f"Failed to send message to {data['chat_id']}: {response_json}")
-                    return False
-                else:
-                    logger.info(f"Message to {data['chat_id']} delivered")
-                    return True
+            if response.status != 200:
+                logger.error(f"Failed to send message to {data['chat_id']}: {response_json}")
+                return False
+            else:
+                logger.info(f"Message to {data['chat_id']} delivered")
+                return True
         except Exception as e:
             logger.exception(f"Exception occurred while sending message to {data['chat_id']}: {e}")
             return False

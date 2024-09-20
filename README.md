@@ -1,6 +1,6 @@
 # SenderMessages: Asynchronous Telegram Message Sender
 
-**SenderMessages** is an asynchronous Python class designed to send messages and photos to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
+**SenderMessages** is an asynchronous Python class designed to send messages and photos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
 
 ## Table of Contents
 
@@ -8,7 +8,12 @@
 - [How It Works](#how-it-works)
 - [Advantages](#advantages)
 - [Usage Examples](#usage-examples)
+  - [Example 1: Simple Text Message Broadcast](#example-1-simple-text-message-broadcast)
+  - [Example 2: Sending a Single Photo with Text and Buttons](#example-2-sending-a-single-photo-with-text-and-buttons)
+  - [Example 3: Sending Multiple Photos in One Message](#example-3-sending-multiple-photos-in-one-message)
+  - [Example 4: Logging Messages in MongoDB](#example-4-logging-messages-in-mongodb)
 - [Getting Started](#getting-started)
+- [How to Obtain Photo File IDs](#how-to-obtain-photo-file-ids)
 
 ## Overview
 
@@ -18,7 +23,7 @@ In modern applications, especially those involving notifications or updates, sen
 
 **SenderMessages** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, photos, and optional reply markups, in a way that is compatible with the Telegram Bot API.
+1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API.
 
 2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches (packs). Each batch contains a specified number of messages (`batch_size`).
 
@@ -76,9 +81,9 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 2: Sending a Photo with Text and Buttons
+### Example 2: Sending a Single Photo with Text and Buttons
 
-This example shows how to send a photo with a caption and inline buttons.
+This example shows how to send a single photo with a caption and inline buttons.
 
 ```python
 import asyncio
@@ -94,7 +99,7 @@ async def main():
 
     # Prepare the data
     text = "Check out this beautiful photo!"
-    photo_token = "PHOTO_FILE_ID"  # Telegram file ID of the photo
+    photo_tokens = ["PHOTO_FILE_ID"]  # List containing a single Telegram file ID of the photo
     reply_markup = {
         "inline_keyboard": [
             [{"text": "Like", "callback_data": "like"},
@@ -106,7 +111,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, photo_token=photo_token, reply_markup=reply_markup)
+    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens, reply_markup=reply_markup)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -115,7 +120,47 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 3: Logging Messages in MongoDB
+### Example 3: Sending Multiple Photos in One Message
+
+This example demonstrates how to send multiple photos in a single message using `sendMediaGroup`.
+
+```python
+import asyncio
+
+async def main():
+    # Initialize the message sender
+    sender = SenderMessages(
+        token='YOUR_TELEGRAM_BOT_TOKEN',
+        batch_size=2,  # Send 2 messages concurrently
+        delay_between_batches=1.5,  # 1.5-second delay between batches
+        use_mongo=False  # No MongoDB logging
+    )
+
+    # Prepare the data
+    text = "Here are some photos from our latest event!"
+    photo_tokens = ["PHOTO_FILE_ID_1", "PHOTO_FILE_ID_2", "PHOTO_FILE_ID_3"]  # List of Telegram file IDs
+
+    # Note: reply_markup is not supported with sendMediaGroup
+    reply_markup = None
+
+    # List of chat IDs
+    chat_ids = [123456789, 987654321, 456123789]
+
+    # Start the message sending process
+    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens)
+
+    # Output statistics
+    print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
+
+# Run the asynchronous task
+asyncio.run(main())
+```
+
+**Important Note:**
+
+- When sending multiple photos using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
+
+### Example 4: Logging Messages in MongoDB
 
 This example demonstrates how to enable MongoDB logging to keep records of sent messages.
 
@@ -160,3 +205,26 @@ To start using **SenderMessages**, you need:
   pip install -r requirements.txt
   ```
 - **MongoDB Instance (Optional)**: If you wish to enable logging, have access to a MongoDB database.
+
+## How to Obtain Photo File IDs
+
+To reuse a photo in Telegram without re-uploading, you can obtain its `file_id` by sending the photo as a message through your bot to any user (e.g., yourself or any user who has interacted with the bot).
+
+Here’s a simple function:
+
+```python
+import requests
+
+def get_photo_token(bot_token: str, photo_path: str, chat_id: int) -> str:
+    with open(photo_path, 'rb') as photo:
+        response = requests.post(
+            url=f"https://api.telegram.org/bot{bot_token}/sendPhoto",
+            files={'photo': photo},
+            data={'chat_id': chat_id}
+        )
+        return response.json()['result']['photo'][-1]['file_id']
+
+# Example usage:
+# Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your bot token and use your own chat_id or any user who interacted with the bot.
+# photo_token = get_photo_token('YOUR_TELEGRAM_BOT_TOKEN', '/path/to/photo.jpg', YOUR_CHAT_ID)
+```

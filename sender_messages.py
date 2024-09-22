@@ -140,8 +140,11 @@ class SenderMessages:
     async def _execute_batches(self, batches: Generator[list, None, None]) -> tuple[int, int]:
         """Processes the batches of send message coroutines."""
         delivered, not_delivered = 0, 0
+        sleep_time = 0
 
         for batch in batches:
+            if sleep_time:
+                await asyncio.sleep(sleep_time)
             batch_start_time = time.monotonic()
 
             for future in asyncio.as_completed(batch):
@@ -151,8 +154,5 @@ class SenderMessages:
                 else:
                     not_delivered += 1
 
-            time_elapsed = time.monotonic() - batch_start_time
-            if time_elapsed < self._delay_between_batches:
-                await asyncio.sleep(self._delay_between_batches - time_elapsed)
-
+            sleep_time = max(batch_start_time + self._delay_between_batches - time.monotonic(), 0)
         return delivered, not_delivered

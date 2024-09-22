@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from typing import Literal
 
 from aiohttp import ClientSession
 from motor import motor_asyncio
@@ -23,9 +24,7 @@ class SenderMessages:
         mongo_db: str = 'tg-bot-sender',
         parse_mode: str = 'HTML'
     ):
-        self._url_send_photo = self._url_template.format(token=token, method="sendPhoto")
-        self._url_send_message = self._url_template.format(token=token, method="sendMessage")
-        self._url_send_media_group = self._url_template.format(token=token, method="sendMediaGroup")
+        self._token = token
         self._batch_size = batch_size
         self._delay_between_batches = delay_between_batches
         self._use_mongo = use_mongo
@@ -33,6 +32,7 @@ class SenderMessages:
         self._mongo_db = mongo_db
         self._parse_mode = parse_mode
         self._mongo_collection = None
+        self._method: Literal["sendMessage", "sendPhoto", "sendMediaGroup"] | None = None
         self._url = None
 
     async def run(
@@ -44,11 +44,13 @@ class SenderMessages:
     ) -> (int, int):
         """Starts the message sending process."""
         if photo_tokens and len(photo_tokens) > 1:
-            self._url = self._url_send_media_group
+            self._method = 'sendMediaGroup'
         elif photo_tokens and len(photo_tokens) == 1:
-            self._url = self._url_send_photo
+            self._method = 'sendPhoto'
         else:
-            self._url = self._url_send_message
+            self._method = 'sendMessage'
+
+        self._url = self._url_template.format(token=self._token, method=self._method)
         data = self._prepare_data(text, photo_tokens, reply_markup)
         if self._use_mongo:
             collection_name = self._get_collection_name()
@@ -56,9 +58,8 @@ class SenderMessages:
         return await self._send_messages(data, chat_ids)
 
     def _prepare_data(self, text: str, photo_tokens: list[str] | None, reply_markup: dict | None) -> dict:
-        """Prepares data for sending."""
-        if photo_tokens and len(photo_tokens) > 1:
-            # Prepare data for sendMediaGroup
+        """Prepares data for sending based on the method."""
+        if self._method == 'sendMediaGroup':
             media = []
             for i, photo_token in enumerate(photo_tokens):
                 item = {'type': 'photo', 'media': photo_token}
@@ -69,13 +70,11 @@ class SenderMessages:
             data = {'media': json.dumps(media)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
-        elif photo_tokens and len(photo_tokens) == 1:
-            # Prepare data for sendPhoto
+        elif self._method == 'sendPhoto':
             data = {'photo': photo_tokens[0], 'caption': text, 'parse_mode': self._parse_mode}
             if reply_markup:
                 data['reply_markup'] = json.dumps(reply_markup)
-        else:
-            # Prepare data for sendMessage
+        else:  # sendMessage
             data = {'text': text, 'parse_mode': self._parse_mode}
             if reply_markup:
                 data['reply_markup'] = json.dumps(reply_markup)

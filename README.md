@@ -59,11 +59,11 @@ import asyncio
 async def main():
     # Initialize the message sender
     sender = SenderMessages(
-        token='YOUR_TELEGRAM_BOT_TOKEN',
+        token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=30,  # Increased batch size to 30 messages concurrently
         delay_between_batches=1.5,  # 1.5-second delay between batches
         use_mongo=False,  # No MongoDB logging
-        parse_mode='Markdown'  # Setting parse_mode to Markdown
+        parse_mode="Markdown"  # Setting parse_mode to Markdown
     )
 
     # Message text
@@ -92,11 +92,11 @@ import asyncio
 async def main():
     # Initialize the message sender
     sender = SenderMessages(
-        token='YOUR_TELEGRAM_BOT_TOKEN',
+        token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=20,  # Send 20 messages concurrently
         delay_between_batches=2.0,  # 2-second delay between batches
         use_mongo=True,  # Log results in MongoDB
-        parse_mode='HTML'  # Using HTML as parse_mode
+        parse_mode="HTML"  # Using HTML as parse_mode
     )
 
     # Prepare the data
@@ -132,7 +132,7 @@ import asyncio
 async def main():
     # Initialize the message sender
     sender = SenderMessages(
-        token='YOUR_TELEGRAM_BOT_TOKEN',
+        token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=2,  # Send 2 messages concurrently
         delay_between_batches=1.5,  # 1.5-second delay between batches
         use_mongo=False  # No MongoDB logging
@@ -172,12 +172,12 @@ import asyncio
 async def main():
     # Initialize the message sender with MongoDB logging
     sender = SenderMessages(
-        token='YOUR_TELEGRAM_BOT_TOKEN',
+        token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=10,  # Batch size of 10 messages
         delay_between_batches=1.0,  # 1-second delay between batches
         use_mongo=True,  # Enable MongoDB logging
-        mongo_uri='mongodb://localhost:27017',  # MongoDB URI
-        mongo_db='telegram_logs'  # Database name
+        mongo_uri="mongodb://localhost:27017",  # MongoDB URI
+        mongo_db="telegram_logs"  # Database name
     )
 
     # Message text
@@ -218,15 +218,15 @@ Here’s a simple function:
 import requests
 
 def get_photo_token(bot_token: str, photo_path: str, chat_id: int) -> str:
-    with open(photo_path, 'rb') as photo:
+    with open(photo_path, "rb") as photo:
         response = requests.post(
             url=f"https://api.telegram.org/bot{bot_token}/sendPhoto",
-            files={'photo': photo},
-            data={'chat_id': chat_id}
+            files={"photo": photo},
+            data={"chat_id": chat_id}
         )
-        return response.json()['result']['photo'][-1]['file_id']
+        return response.json()["result"]["photo"][-1]["file_id"]
 
 # Example usage:
-# Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your bot token and use your own chat_id or any user who interacted with the bot.
-# photo_token = get_photo_token('YOUR_TELEGRAM_BOT_TOKEN', '/path/to/photo.jpg', YOUR_CHAT_ID)
+# Replace "YOUR_TELEGRAM_BOT_TOKEN" with your bot token and use your own chat_id or any user who interacted with the bot.
+# photo_token = get_photo_token("YOUR_TELEGRAM_BOT_TOKEN", "/path/to/photo.jpg", YOUR_CHAT_ID)
 ```

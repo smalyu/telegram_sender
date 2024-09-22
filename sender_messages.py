@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class SenderMessages:
-    _url_template: str = 'https://api.telegram.org/bot{token}/{method}'
+    _url_template: str = "https://api.telegram.org/bot{token}/{method}"
 
     def __init__(
         self,
@@ -20,9 +20,9 @@ class SenderMessages:
         batch_size: int = 25,
         delay_between_batches: float = 1.1,
         use_mongo: bool = True,
-        mongo_uri: str = 'mongodb://localhost:27017',
-        mongo_db: str = 'tg-bot-sender',
-        parse_mode: str = 'HTML'
+        mongo_uri: str = "mongodb://localhost:27017",
+        mongo_db: str = "tg-bot-sender",
+        parse_mode: str = "HTML"
     ):
         self._token = token
         self._batch_size = batch_size
@@ -44,11 +44,11 @@ class SenderMessages:
     ) -> (int, int):
         """Starts the message sending process."""
         if photo_tokens and len(photo_tokens) > 1:
-            self._method = 'sendMediaGroup'
+            self._method = "sendMediaGroup"
         elif photo_tokens and len(photo_tokens) == 1:
-            self._method = 'sendPhoto'
+            self._method = "sendPhoto"
         else:
-            self._method = 'sendMessage'
+            self._method = "sendMessage"
 
         self._url = self._url_template.format(token=self._token, method=self._method)
         data = self._prepare_data(text, photo_tokens, reply_markup)
@@ -59,31 +59,31 @@ class SenderMessages:
 
     def _prepare_data(self, text: str, photo_tokens: list[str] | None, reply_markup: dict | None) -> dict:
         """Prepares data for sending based on the method."""
-        if self._method == 'sendMediaGroup':
+        if self._method == "sendMediaGroup":
             media = []
             for i, photo_token in enumerate(photo_tokens):
-                item = {'type': 'photo', 'media': photo_token}
+                item = {"type": "photo", "media": photo_token}
                 if i == 0:
-                    item['caption'] = text
-                    item['parse_mode'] = self._parse_mode
+                    item["caption"] = text
+                    item["parse_mode"] = self._parse_mode
                 media.append(item)
-            data = {'media': json.dumps(media)}
+            data = {"media": json.dumps(media)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
-        elif self._method == 'sendPhoto':
-            data = {'photo': photo_tokens[0], 'caption': text, 'parse_mode': self._parse_mode}
+        elif self._method == "sendPhoto":
+            data = {"photo": photo_tokens[0], "caption": text, "parse_mode": self._parse_mode}
             if reply_markup:
-                data['reply_markup'] = json.dumps(reply_markup)
+                data["reply_markup"] = json.dumps(reply_markup)
         else:  # sendMessage
-            data = {'text': text, 'parse_mode': self._parse_mode}
+            data = {"text": text, "parse_mode": self._parse_mode}
             if reply_markup:
-                data['reply_markup'] = json.dumps(reply_markup)
+                data["reply_markup"] = json.dumps(reply_markup)
         return data
 
     def _get_collection_name(self) -> str:
         """Creates a unique name for the MongoDB collection using Moscow time."""
         moscow_time = time.gmtime(time.time() + 3 * 60 * 60)
-        return time.strftime('%d_%m_%Y__%H_%M_%S', moscow_time)
+        return time.strftime("%d_%m_%Y__%H_%M_%S", moscow_time)
 
     async def _send_messages(self, data: dict, chat_ids: list[int]) -> (int, int):
         """Starts the message sending process with logging."""
@@ -98,7 +98,7 @@ class SenderMessages:
 
         for chat_id in chat_ids:
             data_with_id = data.copy()
-            data_with_id['chat_id'] = chat_id
+            data_with_id["chat_id"] = chat_id
             current_batch.append(self._send_message(data_with_id, session))
             if len(current_batch) >= self._batch_size:
                 batches.append(current_batch)

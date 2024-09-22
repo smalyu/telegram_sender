@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Literal, AsyncGenerator
+from typing import Literal, Generator
 
 from aiohttp import ClientSession
 
@@ -105,7 +105,7 @@ class SenderMessages:
         batches = self._create_send_batches(data, chat_ids)
         return await self._execute_batches(batches)
 
-    async def _create_send_batches(self, data: dict, chat_ids: list[int]) -> AsyncGenerator[list, None]:
+    def _create_send_batches(self, data: dict, chat_ids: list[int]) -> Generator[list, None, None]:
         """Creates batches of send message coroutines."""
         batch = []
         for chat_id in chat_ids:
@@ -137,11 +137,11 @@ class SenderMessages:
             logger.exception(f"Exception occurred while sending message to {data['chat_id']}: {e}")
             return False
 
-    async def _execute_batches(self, batches: AsyncGenerator[list, None]) -> tuple[int, int]:
+    async def _execute_batches(self, batches: Generator[list, None, None]) -> tuple[int, int]:
         """Processes the batches of send message coroutines."""
         delivered, not_delivered = 0, 0
 
-        async for batch in batches:
+        for batch in batches:
             batch_start_time = time.monotonic()
 
             for future in asyncio.as_completed(batch):

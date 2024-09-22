@@ -2,10 +2,9 @@ import asyncio
 import json
 import logging
 import time
-from typing import Literal
+from typing import Literal, AsyncGenerator
 
 from aiohttp import ClientSession
-from motor import motor_asyncio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,7 +21,7 @@ class SenderMessages:
         use_mongo: bool = True,
         mongo_uri: str = "mongodb://localhost:27017",
         mongo_db: str = "tg-bot-sender",
-        parse_mode: str = "HTML"
+        parse_mode: str = "HTML",
     ):
         self._token = token
         self._batch_size = batch_size
@@ -34,6 +33,7 @@ class SenderMessages:
         self._mongo_collection = None
         self._method: Literal["sendMessage", "sendPhoto", "sendMediaGroup"] | None = None
         self._url = None
+        self._session: ClientSession | None = None
 
     async def run(
         self,
@@ -41,7 +41,7 @@ class SenderMessages:
         chat_ids: list[int],
         photo_tokens: list[str] | None = None,
         reply_markup: dict | None = None,
-    ) -> (int, int):
+    ) -> tuple[int, int]:
         """Starts the message sending process."""
         if photo_tokens and len(photo_tokens) > 1:
             self._method = "sendMediaGroup"
@@ -52,12 +52,23 @@ class SenderMessages:
 
         self._url = self._url_template.format(token=self._token, method=self._method)
         data = self._prepare_data(text, photo_tokens, reply_markup)
-        if self._use_mongo:
-            collection_name = self._get_collection_name()
-            self._mongo_collection = motor_asyncio.AsyncIOMotorClient(self._mongo_uri)[self._mongo_db][collection_name]
-        return await self._send_messages(data, chat_ids)
 
-    def _prepare_data(self, text: str, photo_tokens: list[str] | None, reply_markup: dict | None) -> dict:
+        async with ClientSession() as session:
+            self._session = session
+            if self._use_mongo:
+                from motor.motor_asyncio import AsyncIOMotorClient
+
+                client = AsyncIOMotorClient(self._mongo_uri)
+                collection_name = self._get_collection_name()
+                self._mongo_collection = client[self._mongo_db][collection_name]
+            return await self._send_messages(data, chat_ids)
+
+    def _prepare_data(
+        self,
+        text: str,
+        photo_tokens: list[str] | None,
+        reply_markup: dict | None,
+    ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
             media = []
@@ -71,7 +82,11 @@ class SenderMessages:
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
         elif self._method == "sendPhoto":
-            data = {"photo": photo_tokens[0], "caption": text, "parse_mode": self._parse_mode}
+            data = {
+                "photo": photo_tokens[0],
+                "caption": text,
+                "parse_mode": self._parse_mode,
+            }
             if reply_markup:
                 data["reply_markup"] = json.dumps(reply_markup)
         else:  # sendMessage
@@ -85,32 +100,28 @@ class SenderMessages:
         moscow_time = time.gmtime(time.time() + 3 * 60 * 60)
         return time.strftime("%d_%m_%Y__%H_%M_%S", moscow_time)
 
-    async def _send_messages(self, data: dict, chat_ids: list[int]) -> (int, int):
+    async def _send_messages(self, data: dict, chat_ids: list[int]) -> tuple[int, int]:
         """Starts the message sending process with logging."""
-        async with ClientSession() as session:
-            batches = self._create_send_batches(data, chat_ids, session)
-            return await self._execute_batches(batches)
+        batches = self._create_send_batches(data, chat_ids)
+        return await self._execute_batches(batches)
 
-    def _create_send_batches(self, data: dict, chat_ids: list[int], session: ClientSession) -> list[list]:
+    async def _create_send_batches(self, data: dict, chat_ids: list[int]) -> AsyncGenerator[list, None]:
         """Creates batches of send message coroutines."""
-        batches = []
-        current_batch = []
-
+        batch = []
         for chat_id in chat_ids:
             data_with_id = data.copy()
             data_with_id["chat_id"] = chat_id
-            current_batch.append(self._send_message(data_with_id, session))
-            if len(current_batch) >= self._batch_size:
-                batches.append(current_batch)
-                current_batch = []
-        if current_batch:
-            batches.append(current_batch)
-        return batches
+            batch.append(self._send_message(data_with_id))
+            if len(batch) >= self._batch_size:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
 
-    async def _send_message(self, data: dict, session: ClientSession) -> bool:
+    async def _send_message(self, data: dict) -> bool:
         """Sends a single message and logs the result to MongoDB if enabled."""
         try:
-            async with session.post(self._url, data=data) as response:
+            async with self._session.post(self._url, data=data) as response:
                 response_json = await response.json()
 
             if self._use_mongo and self._mongo_collection is not None:
@@ -126,19 +137,19 @@ class SenderMessages:
             logger.exception(f"Exception occurred while sending message to {data['chat_id']}: {e}")
             return False
 
-    async def _execute_batches(self, batches: list[list]) -> (int, int):
+    async def _execute_batches(self, batches: AsyncGenerator[list, None]) -> tuple[int, int]:
         """Processes the batches of send message coroutines."""
         delivered, not_delivered = 0, 0
 
-        for batch in batches:
+        async for batch in batches:
             batch_start_time = time.monotonic()
 
-            results = await asyncio.gather(*batch, return_exceptions=True)
-            for result in results:
-                if isinstance(result, Exception) or not result:
-                    not_delivered += 1
-                else:
+            for future in asyncio.as_completed(batch):
+                result = await future
+                if result:
                     delivered += 1
+                else:
+                    not_delivered += 1
 
             time_elapsed = time.monotonic() - batch_start_time
             if time_elapsed < self._delay_between_batches:

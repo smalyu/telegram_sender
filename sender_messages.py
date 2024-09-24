@@ -2,12 +2,15 @@ import asyncio
 import json
 import logging
 import time
-from typing import Literal, Generator
+from typing import TYPE_CHECKING, Literal, Generator
 
 from aiohttp import ClientSession
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from motor.motor_asyncio import AsyncIOMotorCollection
 
 
 class SenderMessages:
@@ -23,17 +26,16 @@ class SenderMessages:
         mongo_db: str = "tg-bot-sender",
         parse_mode: str = "HTML",
     ):
-        self._token = token
-        self._batch_size = batch_size
-        self._delay_between_batches = delay_between_batches
-        self._use_mongo = use_mongo
-        self._mongo_uri = mongo_uri
-        self._mongo_db = mongo_db
-        self._parse_mode = parse_mode
-        self._mongo_collection = None
-        self._method: Literal["sendMessage", "sendPhoto", "sendMediaGroup"] | None = None
-        self._url = None
-        self._session: ClientSession | None = None
+        self._token: str = token
+        self._batch_size: int = batch_size
+        self._delay_between_batches: float = delay_between_batches
+        self._use_mongo: bool = use_mongo
+        self._mongo_uri: str = mongo_uri
+        self._mongo_db: str = mongo_db
+        self._parse_mode: str = parse_mode
+        self._mongo_collection: AsyncIOMotorCollection | None = None
+        self._method: Literal["sendMessage", "sendPhoto", "sendMediaGroup"] = "sendMessage"
+        self._url: str = ""
 
     async def run(
         self,
@@ -43,9 +45,12 @@ class SenderMessages:
         reply_markup: dict | None = None,
     ) -> tuple[int, int]:
         """Starts the message sending process."""
-        if photo_tokens and len(photo_tokens) > 1:
+        if photo_tokens is None:
+            photo_tokens = []
+
+        if len(photo_tokens) > 1:
             self._method = "sendMediaGroup"
-        elif photo_tokens and len(photo_tokens) == 1:
+        elif len(photo_tokens) == 1:
             self._method = "sendPhoto"
         else:
             self._method = "sendMessage"
@@ -53,12 +58,11 @@ class SenderMessages:
         self._url = self._url_template.format(token=self._token, method=self._method)
         data = self._prepare_data(text, photo_tokens, reply_markup)
 
-        async with ClientSession() as session:
-            self._session = session
+        async with ClientSession() as self._session:
             if self._use_mongo:
                 from motor.motor_asyncio import AsyncIOMotorClient
 
-                client = AsyncIOMotorClient(self._mongo_uri)
+                client: AsyncIOMotorClient = AsyncIOMotorClient(self._mongo_uri)
                 collection_name = self._get_collection_name()
                 self._mongo_collection = client[self._mongo_db][collection_name]
             return await self._send_messages(data, chat_ids)
@@ -66,7 +70,7 @@ class SenderMessages:
     def _prepare_data(
         self,
         text: str,
-        photo_tokens: list[str] | None,
+        photo_tokens: list[str],
         reply_markup: dict | None,
     ) -> dict:
         """Prepares data for sending based on the method."""
@@ -140,7 +144,7 @@ class SenderMessages:
     async def _execute_batches(self, batches: Generator[list, None, None]) -> tuple[int, int]:
         """Processes the batches of send message coroutines."""
         delivered, not_delivered = 0, 0
-        sleep_time = 0
+        sleep_time = 0.0
 
         for batch in batches:
             if sleep_time:
@@ -154,5 +158,5 @@ class SenderMessages:
                 else:
                     not_delivered += 1
 
-            sleep_time = max(batch_start_time + self._delay_between_batches - time.monotonic(), 0)
+            sleep_time = max(batch_start_time + self._delay_between_batches - time.monotonic(), 0.0)
         return delivered, not_delivered

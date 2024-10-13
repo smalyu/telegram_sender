@@ -1,10 +1,11 @@
-# SenderMessages: Asynchronous Telegram Message Sender
+# telegram_sender: Asynchronous Telegram Message Sender
 
-**SenderMessages** is an asynchronous Python class designed to send messages and photos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
+**telegram_sender** is an asynchronous Python package designed to send messages and photos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Installation](#installation)
 - [How It Works](#how-it-works)
 - [Advantages](#advantages)
 - [Usage Examples](#usage-examples)
@@ -17,15 +18,25 @@
 
 ## Overview
 
-In modern applications, especially those involving notifications or updates, sending messages to a multitude of users is a common requirement. **SenderMessages** addresses this need by providing an asynchronous solution that sends messages in batches, handles errors gracefully, and optionally logs the results to MongoDB for record-keeping or analysis.
+In modern applications, especially those involving notifications or updates, sending messages to a multitude of users is a common requirement. **telegram_sender** addresses this need by providing an asynchronous solution that sends messages in batches, handles errors gracefully, and optionally logs the results to MongoDB for record-keeping or analysis.
+
+## Installation
+
+You can install **telegram_sender** directly from PyPI:
+
+```bash
+pip install telegram_sender
+```
+
+Make sure you have Python 3.10 or higher installed.
 
 ## How It Works
 
-**SenderMessages** operates by:
+**telegram_sender** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class, to control how text is parsed by Telegram.
+1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
 
-2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches (packs). Each batch contains a specified number of messages (`batch_size`).
+2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches. Each batch contains a specified number of messages (`batch_size`).
 
 3. **Asynchronous Sending**: Using asynchronous HTTP requests, it sends each batch concurrently, ensuring that the program doesn't block while waiting for responses.
 
@@ -55,6 +66,7 @@ This example demonstrates how to send a simple text message to multiple users.
 
 ```python
 import asyncio
+from telegram_sender import SenderMessages
 
 async def main():
     # Initialize the message sender
@@ -88,6 +100,7 @@ This example shows how to send a single photo with a caption and inline buttons.
 
 ```python
 import asyncio
+from telegram_sender import SenderMessages
 
 async def main():
     # Initialize the message sender
@@ -128,6 +141,7 @@ This example demonstrates how to send multiple photos in a single message using 
 
 ```python
 import asyncio
+from telegram_sender import SenderMessages
 
 async def main():
     # Initialize the message sender
@@ -168,6 +182,7 @@ This example demonstrates how to enable MongoDB logging to keep records of sent 
 
 ```python
 import asyncio
+from telegram_sender import SenderMessages
 
 async def main():
     # Initialize the message sender with MongoDB logging
@@ -198,21 +213,25 @@ asyncio.run(main())
 
 ## Getting Started
 
-To start using **SenderMessages**, you need:
+To start using **telegram_sender**, you need:
 
 - **Python 3.10+**: The codebase uses modern Python features and type annotations.
 - **Telegram Bot Token**: Obtain one by creating a bot through [BotFather](https://telegram.me/botfather) on Telegram.
-- **Install Requirements**: The necessary dependencies are listed in the `requirements.txt` file. Install them with:
+- **Install the Package**: Install **telegram_sender** using pip:
+
   ```bash
-  pip install -r requirements.txt
+  pip install telegram_sender
   ```
-- **MongoDB Instance (Optional)**: If you wish to enable logging, have access to a MongoDB database.
+
+- **MongoDB Instance (Optional)**:
+
+ If you wish to enable logging, have access to a MongoDB database.
 
 ## How to Obtain Photo File IDs
 
 To reuse a photo in Telegram without re-uploading, you can obtain its `file_id` by sending the photo as a message through your bot to any user (e.g., yourself or any user who has interacted with the bot).
 
-Here’s a simple function:
+Here's a simple function:
 
 ```python
 import requests

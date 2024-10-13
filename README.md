@@ -1,6 +1,6 @@
 # telegram_sender: Asynchronous Telegram Message Sender
 
-**telegram_sender** is an asynchronous Python package designed to send messages and photos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
+**telegram_sender** is an asynchronous Python package designed to send messages, photos, and videos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
 
 ## Table of Contents
 
@@ -11,10 +11,11 @@
 - [Usage Examples](#usage-examples)
   - [Example 1 - Simple Text Message Broadcast](#example-1---simple-text-message-broadcast)
   - [Example 2 - Sending a Single Photo with Text and Buttons](#example-2---sending-a-single-photo-with-text-and-buttons)
-  - [Example 3 - Sending Multiple Photos in One Message](#example-3---sending-multiple-photos-in-one-message)
-  - [Example 4 - Logging Messages in MongoDB](#example-4---logging-messages-in-mongodb)
+  - [Example 3 - Sending Multiple Photos and Videos in One Message](#example-3---sending-multiple-photos-and-videos-in-one-message)
+  - [Example 4 - Sending a Single Video with Text and Buttons](#example-4---sending-a-single-video-with-text-and-buttons)
+  - [Example 5 - Logging Messages in MongoDB](#example-5---logging-messages-in-mongodb)
 - [Getting Started](#getting-started)
-- [How to Obtain Photo File IDs](#how-to-obtain-photo-file-ids)
+- [How to Obtain Media File IDs](#how-to-obtain-media-file-ids)
 
 ## Overview
 
@@ -34,7 +35,7 @@ Make sure you have Python 3.10 or higher installed.
 
 **telegram_sender** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
+1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos and videos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
 
 2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches. Each batch contains a specified number of messages (`batch_size`).
 
@@ -131,9 +132,9 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 3 - Sending Multiple Photos in One Message
+### Example 3 - Sending Multiple Photos and Videos in One Message
 
-This example demonstrates how to send multiple photos in a single message using `sendMediaGroup`.
+This example demonstrates how to send multiple photos and videos in a single message using `sendMediaGroup`.
 
 ```python
 import asyncio
@@ -149,8 +150,9 @@ async def main():
     )
 
     # Prepare the data
-    text = "Here are some photos from our latest event!"
-    photo_tokens = ["PHOTO_FILE_ID_1", "PHOTO_FILE_ID_2", "PHOTO_FILE_ID_3"]  # List of Telegram file IDs
+    text = "Here are some highlights from our latest event!"
+    photo_tokens = ["PHOTO_FILE_ID_1", "PHOTO_FILE_ID_2"]
+    video_tokens = ["VIDEO_FILE_ID_1"]  # List of Telegram file IDs
 
     # Note: reply_markup is not supported with sendMediaGroup
     reply_markup = None
@@ -159,7 +161,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens)
+    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens, video_tokens=video_tokens)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -170,9 +172,50 @@ asyncio.run(main())
 
 **Important Note:**
 
-- When sending multiple photos using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
+- When sending multiple media files using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
 
-### Example 4 - Logging Messages in MongoDB
+### Example 4 - Sending a Single Video with Text and Buttons
+
+This example shows how to send a single video with a caption and inline buttons.
+
+```python
+import asyncio
+from telegram_sender import SenderMessages
+
+async def main():
+    # Initialize the message sender
+    sender = SenderMessages(
+        token="YOUR_TELEGRAM_BOT_TOKEN",
+        batch_size=10,  # Send 10 messages concurrently
+        delay_between_batches=1.0,  # 1-second delay between batches
+        use_mongo=False,  # No MongoDB logging
+        parse_mode="Markdown"  # Using Markdown as parse_mode
+    )
+
+    # Prepare the data
+    text = "*Watch* this exciting video!"
+    video_tokens = ["VIDEO_FILE_ID"]  # List containing a single Telegram file ID of the video
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "👍 Like", "callback_data": "like"},
+             {"text": "👎 Dislike", "callback_data": "dislike"}]
+        ]
+    }
+
+    # List of chat IDs
+    chat_ids = [123456789, 987654321, 456123789]
+
+    # Start the message sending process
+    delivered, not_delivered = await sender.run(text, chat_ids, video_tokens=video_tokens, reply_markup=reply_markup)
+
+    # Output statistics
+    print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
+
+# Run the asynchronous task
+asyncio.run(main())
+```
+
+### Example 5 - Logging Messages in MongoDB
 
 This example demonstrates how to enable MongoDB logging to keep records of sent messages.
 
@@ -221,25 +264,31 @@ To start using **telegram_sender**, you need:
 
 - **MongoDB Instance (Optional)**: If you wish to enable logging, have access to a MongoDB database.
 
-## How to Obtain Photo File IDs
+## How to Obtain Media File IDs
 
-To reuse a photo in Telegram without re-uploading, you can obtain its `file_id` by sending the photo as a message through your bot to any user (e.g., yourself or any user who has interacted with the bot).
+To reuse photos or videos in Telegram without re-uploading, you can obtain their `file_id` by sending the media as a message through your bot to any user (e.g., yourself or any user who has interacted with the bot).
 
-Here's a simple function:
+Here's a simple function to get a photo or video `file_id`:
 
 ```python
 import requests
 
-def get_photo_token(bot_token: str, photo_path: str, chat_id: int) -> str:
-    with open(photo_path, "rb") as photo:
+def get_media_token(bot_token: str, media_path: str, chat_id: int, media_type: str = "photo") -> str:
+    with open(media_path, "rb") as media_file:
         response = requests.post(
-            url=f"https://api.telegram.org/bot{bot_token}/sendPhoto",
-            files={"photo": photo},
+            url=f"https://api.telegram.org/bot{bot_token}/send{media_type.capitalize()}",
+            files={media_type: media_file},
             data={"chat_id": chat_id}
         )
-        return response.json()["result"]["photo"][-1]["file_id"]
+        media_key = "photo" if media_type == "photo" else "video"
+        media = response.json()["result"][media_key]
+        if isinstance(media, list):
+            return media[-1]["file_id"]
+        else:
+            return media["file_id"]
 
 # Example usage:
 # Replace "YOUR_TELEGRAM_BOT_TOKEN" with your bot token and use your own chat_id or any user who interacted with the bot.
-# photo_token = get_photo_token("YOUR_TELEGRAM_BOT_TOKEN", "/path/to/photo.jpg", YOUR_CHAT_ID)
+# photo_token = get_media_token("YOUR_TELEGRAM_BOT_TOKEN", "/path/to/photo.jpg", YOUR_CHAT_ID, media_type="photo")
+# video_token = get_media_token("YOUR_TELEGRAM_BOT_TOKEN", "/path/to/video.mp4", YOUR_CHAT_ID, media_type="video")
 ```

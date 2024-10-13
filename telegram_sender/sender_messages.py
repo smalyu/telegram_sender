@@ -34,7 +34,7 @@ class SenderMessages:
         self._mongo_db: str = mongo_db
         self._parse_mode: str = parse_mode
         self._mongo_collection: AsyncIOMotorCollection | None = None
-        self._method: Literal["sendMessage", "sendPhoto", "sendMediaGroup"] = "sendMessage"
+        self._method: Literal["sendMessage", "sendPhoto", "sendVideo", "sendMediaGroup"] = "sendMessage"
         self._url: str = ""
 
     async def run(
@@ -42,21 +42,26 @@ class SenderMessages:
         text: str,
         chat_ids: list[int],
         photo_tokens: list[str] | None = None,
+        video_tokens: list[str] | None = None,
         reply_markup: dict | None = None,
     ) -> tuple[int, int]:
         """Starts the message sending process."""
         if photo_tokens is None:
             photo_tokens = []
+        if video_tokens is None:
+            video_tokens = []
 
-        if len(photo_tokens) > 1:
+        if len(photo_tokens) + len(video_tokens) > 1:
             self._method = "sendMediaGroup"
-        elif len(photo_tokens) == 1:
+        elif len(photo_tokens) == 1 and len(video_tokens) == 0:
             self._method = "sendPhoto"
+        elif len(photo_tokens) == 0 and len(video_tokens) == 1:
+            self._method = "sendVideo"
         else:
             self._method = "sendMessage"
 
         self._url = self._url_template.format(token=self._token, method=self._method)
-        data = self._prepare_data(text, photo_tokens, reply_markup)
+        data = self._prepare_data(text, photo_tokens, video_tokens, reply_markup)
 
         async with ClientSession() as self._session:
             if self._use_mongo:
@@ -71,13 +76,15 @@ class SenderMessages:
         self,
         text: str,
         photo_tokens: list[str],
+        video_tokens: list[str],
         reply_markup: dict | None,
     ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
             media = []
-            for i, photo_token in enumerate(photo_tokens):
-                item = {"type": "photo", "media": photo_token}
+            media_items = [("photo", token) for token in photo_tokens] + [("video", token) for token in video_tokens]
+            for i, (media_type, media_token) in enumerate(media_items):
+                item = {"type": media_type, "media": media_token}
                 if i == 0:
                     item["caption"] = text
                     item["parse_mode"] = self._parse_mode
@@ -88,6 +95,14 @@ class SenderMessages:
         elif self._method == "sendPhoto":
             data = {
                 "photo": photo_tokens[0],
+                "caption": text,
+                "parse_mode": self._parse_mode,
+            }
+            if reply_markup:
+                data["reply_markup"] = json.dumps(reply_markup)
+        elif self._method == "sendVideo":
+            data = {
+                "video": video_tokens[0],
                 "caption": text,
                 "parse_mode": self._parse_mode,
             }

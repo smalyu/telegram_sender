@@ -1,2 +1,4 @@
 venv/
 .venv/
+dist/
+telegram_sender.egg-info/

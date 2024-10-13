@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Literal, Generator
+from typing import TYPE_CHECKING, Literal, Generator, TypedDict
 
 from aiohttp import ClientSession
 
@@ -13,8 +13,14 @@ if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection
 
 
+class MediaItem(TypedDict):
+    type: Literal["photo", "video"]
+    media: str
+
+
 class SenderMessages:
     _url_template: str = "https://api.telegram.org/bot{token}/{method}"
+    _SUPPORTED_MEDIA_TYPES = {"photo", "video"}
 
     def __init__(
         self,
@@ -41,27 +47,27 @@ class SenderMessages:
         self,
         text: str,
         chat_ids: list[int],
-        photo_tokens: list[str] | None = None,
-        video_tokens: list[str] | None = None,
+        media_items: list[MediaItem] | None = None,
         reply_markup: dict | None = None,
     ) -> tuple[int, int]:
         """Starts the message sending process."""
-        if photo_tokens is None:
-            photo_tokens = []
-        if video_tokens is None:
-            video_tokens = []
+        if media_items is None:
+            media_items = []
 
-        if len(photo_tokens) + len(video_tokens) > 1:
+        media_items = self._validate_media_items(media_items)
+
+        if len(media_items) > 1:
             self._method = "sendMediaGroup"
-        elif len(photo_tokens) == 1 and len(video_tokens) == 0:
-            self._method = "sendPhoto"
-        elif len(photo_tokens) == 0 and len(video_tokens) == 1:
-            self._method = "sendVideo"
+        elif len(media_items) == 1:
+            if media_items[0]['type'] == 'photo':
+                self._method = "sendPhoto"
+            elif media_items[0]['type'] == 'video':
+                self._method = "sendVideo"
         else:
             self._method = "sendMessage"
 
         self._url = self._url_template.format(token=self._token, method=self._method)
-        data = self._prepare_data(text, photo_tokens, video_tokens, reply_markup)
+        data = self._prepare_data(text, media_items, reply_markup)
 
         async with ClientSession() as self._session:
             if self._use_mongo:
@@ -72,29 +78,30 @@ class SenderMessages:
                 self._mongo_collection = client[self._mongo_db][collection_name]
             return await self._send_messages(data, chat_ids)
 
+    def _validate_media_items(self, media_items: list[MediaItem]) -> list[MediaItem]:
+        """Validates the media items and throws an error if any contain unsupported media types."""
+        for item in media_items:
+            if item['type'] not in self._SUPPORTED_MEDIA_TYPES:
+                raise ValueError(f"Unsupported media type: {item['type']} - "
+                                 f"Allowed types are: {self._SUPPORTED_MEDIA_TYPES}")
+        return media_items
+
     def _prepare_data(
         self,
         text: str,
-        photo_tokens: list[str],
-        video_tokens: list[str],
+        media_items: list[MediaItem],
         reply_markup: dict | None,
     ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
-            media = []
-            media_items = [("photo", token) for token in photo_tokens] + [("video", token) for token in video_tokens]
-            for i, (media_type, media_token) in enumerate(media_items):
-                item = {"type": media_type, "media": media_token}
-                if i == 0:
-                    item["caption"] = text
-                    item["parse_mode"] = self._parse_mode
-                media.append(item)
-            data = {"media": json.dumps(media)}
+            media_items[0]["caption"] = text
+            media_items[0]["parse_mode"] = self._parse_mode
+            data = {"media": json.dumps(media_items)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
         elif self._method == "sendPhoto":
             data = {
-                "photo": photo_tokens[0],
+                "photo": media_items[0]['media'],
                 "caption": text,
                 "parse_mode": self._parse_mode,
             }
@@ -102,7 +109,7 @@ class SenderMessages:
                 data["reply_markup"] = json.dumps(reply_markup)
         elif self._method == "sendVideo":
             data = {
-                "video": video_tokens[0],
+                "video": media_items[0]['media'],
                 "caption": text,
                 "parse_mode": self._parse_mode,
             }

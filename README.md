@@ -1,6 +1,6 @@
 # telegram_sender: Asynchronous Telegram Message Sender
 
-**telegram_sender** is an asynchronous Python package designed to send messages, photos, and videos (single or multiple) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
+**telegram_sender** is an asynchronous Python package designed to send messages, photos, and videos (single or multiple, in any order) to multiple Telegram users efficiently. It leverages Python's `asyncio` and `aiohttp` libraries to handle concurrent HTTP requests, making it suitable for broadcasting messages to a large number of users with optimal performance.
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@
 - [Usage Examples](#usage-examples)
   - [Example 1 - Simple Text Message Broadcast](#example-1---simple-text-message-broadcast)
   - [Example 2 - Sending a Single Photo with Text and Buttons](#example-2---sending-a-single-photo-with-text-and-buttons)
-  - [Example 3 - Sending Multiple Photos and Videos in One Message](#example-3---sending-multiple-photos-and-videos-in-one-message)
+  - [Example 3 - Sending Multiple Photos and Videos in Any Order](#example-3---sending-multiple-photos-and-videos-in-any-order)
   - [Example 4 - Sending a Single Video with Text and Buttons](#example-4---sending-a-single-video-with-text-and-buttons)
   - [Example 5 - Logging Messages in MongoDB](#example-5---logging-messages-in-mongodb)
 - [Getting Started](#getting-started)
@@ -35,7 +35,7 @@ Make sure you have Python 3.10 or higher installed.
 
 **telegram_sender** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos and videos, and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
+1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos and videos (in any order), and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
 
 2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches. Each batch contains a specified number of messages (`batch_size`).
 
@@ -111,7 +111,9 @@ async def main():
 
     # Prepare the data
     text = "Check out this <b>beautiful</b> photo!"
-    photo_tokens = ["PHOTO_FILE_ID"]  # List containing a single Telegram file ID of the photo
+    media_items = [
+        {"type": "photo", "media": "PHOTO_FILE_ID"}  # Single photo
+    ]
     reply_markup = {
         "inline_keyboard": [
             [{"text": "Like", "callback_data": "like"},
@@ -123,7 +125,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens, reply_markup=reply_markup)
+    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items, reply_markup=reply_markup)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -132,9 +134,9 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 3 - Sending Multiple Photos and Videos in One Message
+### Example 3 - Sending Multiple Photos and Videos in Any Order
 
-This example demonstrates how to send multiple photos and videos in a single message using `sendMediaGroup`.
+This example demonstrates how to send multiple photos and videos in a single message using `sendMediaGroup`, preserving the order of media items.
 
 ```python
 import asyncio
@@ -151,8 +153,11 @@ async def main():
 
     # Prepare the data
     text = "Here are some highlights from our latest event!"
-    photo_tokens = ["PHOTO_FILE_ID_1", "PHOTO_FILE_ID_2"]
-    video_tokens = ["VIDEO_FILE_ID_1"]  # List of Telegram file IDs
+    media_items = [
+        {"type": "photo", "media": "PHOTO_FILE_ID_1"},
+        {"type": "video", "media": "VIDEO_FILE_ID_1"},
+        {"type": "photo", "media": "PHOTO_FILE_ID_2"},
+    ]
 
     # Note: reply_markup is not supported with sendMediaGroup
     reply_markup = None
@@ -161,7 +166,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, photo_tokens=photo_tokens, video_tokens=video_tokens)
+    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -170,9 +175,10 @@ async def main():
 asyncio.run(main())
 ```
 
-**Important Note:**
+**Important Notes:**
 
 - When sending multiple media files using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
+- The `media_items` list allows you to mix photos and videos in any order. Each item is a dictionary with keys `'type'` and `'media'`, where `'type'` can be `'photo'` or `'video'`.
 
 ### Example 4 - Sending a Single Video with Text and Buttons
 
@@ -194,7 +200,9 @@ async def main():
 
     # Prepare the data
     text = "*Watch* this exciting video!"
-    video_tokens = ["VIDEO_FILE_ID"]  # List containing a single Telegram file ID of the video
+    media_items = [
+        {"type": "video", "media": "VIDEO_FILE_ID"}  # Single video
+    ]
     reply_markup = {
         "inline_keyboard": [
             [{"text": "👍 Like", "callback_data": "like"},
@@ -206,7 +214,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, video_tokens=video_tokens, reply_markup=reply_markup)
+    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items, reply_markup=reply_markup)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")

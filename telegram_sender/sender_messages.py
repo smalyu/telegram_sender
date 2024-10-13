@@ -23,7 +23,7 @@ class SenderMessages:
         delay_between_batches: float = 1.1,
         use_mongo: bool = True,
         mongo_uri: str = "mongodb://localhost:27017",
-        mongo_db: str = "tg-bot-sender",
+        mongo_db: str = "telegram_sender",
         parse_mode: str = "HTML",
     ):
         self._token: str = token

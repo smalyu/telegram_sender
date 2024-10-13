@@ -1,3 +1,36 @@
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "telegram_sender"
+version = "1.1.4"
+description = 'Asynchronous Python tool for efficiently sending messages and photos to multiple Telegram users with optional MongoDB logging.'
+readme = "README.md"
+readme-content-type = "text/markdown"
+requires-python = ">=3.10"
+keywords = ["telegram", "bot", "async", "message", "sender"]
+
+authors = [
+  { name="Alexander Smirnov", email="Alex@TheSmirnov.com" },
+]
+
+dependencies = [
+    "aiohttp>=3,<4",
+    "motor>=3,<4"
+]
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "Framework :: AsyncIO",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/smalyu/telegram_sender"
+"Bug Tracker" = "https://github.com/smalyu/telegram_sender/issues"
+"Source" = "https://github.com/smalyu/telegram_sender"

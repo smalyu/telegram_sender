@@ -9,10 +9,10 @@
 - [How It Works](#how-it-works)
 - [Advantages](#advantages)
 - [Usage Examples](#usage-examples)
-  - [Example 1: Simple Text Message Broadcast](#example-1-simple-text-message-broadcast)
-  - [Example 2: Sending a Single Photo with Text and Buttons](#example-2-sending-a-single-photo-with-text-and-buttons)
-  - [Example 3: Sending Multiple Photos in One Message](#example-3-sending-multiple-photos-in-one-message)
-  - [Example 4: Logging Messages in MongoDB](#example-4-logging-messages-in-mongodb)
+  - [Example 1 - Simple Text Message Broadcast](#example-1---simple-text-message-broadcast)
+  - [Example 2 - Sending a Single Photo with Text and Buttons](#example-2---sending-a-single-photo-with-text-and-buttons)
+  - [Example 3 - Sending Multiple Photos in One Message](#example-3---sending-multiple-photos-in-one-message)
+  - [Example 4 - Logging Messages in MongoDB](#example-4---logging-messages-in-mongodb)
 - [Getting Started](#getting-started)
 - [How to Obtain Photo File IDs](#how-to-obtain-photo-file-ids)
 
@@ -49,18 +49,14 @@ Make sure you have Python 3.10 or higher installed.
 ## Advantages
 
 - **Asynchronous Processing**: Utilizes `asyncio` and `aiohttp` for non-blocking operations, making it efficient for high-volume message sending.
-
 - **Batch Management**: Sends messages in configurable batches to optimize performance and comply with rate limits.
-
 - **Error Resilience**: Continues sending messages even if some fail, and logs errors for later review.
-
 - **Configurable**: Offers flexibility through parameters such as batch size, delay intervals, parse mode, and MongoDB settings.
-
 - **Optional Logging**: Allows enabling or disabling MongoDB logging based on your needs.
 
 ## Usage Examples
 
-### Example 1: Simple Text Message Broadcast
+### Example 1 - Simple Text Message Broadcast
 
 This example demonstrates how to send a simple text message to multiple users.
 
@@ -94,7 +90,7 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 2: Sending a Single Photo with Text and Buttons
+### Example 2 - Sending a Single Photo with Text and Buttons
 
 This example shows how to send a single photo with a caption and inline buttons.
 
@@ -135,7 +131,7 @@ async def main():
 asyncio.run(main())
 ```
 
-### Example 3: Sending Multiple Photos in One Message
+### Example 3 - Sending Multiple Photos in One Message
 
 This example demonstrates how to send multiple photos in a single message using `sendMediaGroup`.
 
@@ -176,7 +172,7 @@ asyncio.run(main())
 
 - When sending multiple photos using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
 
-### Example 4: Logging Messages in MongoDB
+### Example 4 - Logging Messages in MongoDB
 
 This example demonstrates how to enable MongoDB logging to keep records of sent messages.
 

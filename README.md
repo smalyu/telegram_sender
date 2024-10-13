@@ -219,9 +219,7 @@ To start using **telegram_sender**, you need:
   pip install telegram_sender
   ```
 
-- **MongoDB Instance (Optional)**:
-
- If you wish to enable logging, have access to a MongoDB database.
+- **MongoDB Instance (Optional)**: If you wish to enable logging, have access to a MongoDB database.
 
 ## How to Obtain Photo File IDs
 

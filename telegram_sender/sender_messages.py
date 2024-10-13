@@ -94,8 +94,8 @@ class SenderMessages:
     ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
-            media_items[0]["caption"] = text
-            media_items[0]["parse_mode"] = self._parse_mode
+            media_items[0]["caption"] = text  # type: ignore
+            media_items[0]["parse_mode"] = self._parse_mode  # type: ignore
             data = {"media": json.dumps(media_items)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")

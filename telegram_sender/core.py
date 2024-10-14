@@ -45,7 +45,7 @@ class TelegramSender:
         use_mongo: bool = True,
         mongo_uri: str = "mongodb://localhost:27017",
         mongo_db: str = "telegram_sender",
-        parse_mode: Literal["MarkdownV2", "Markdown", "HTML"] = "MarkdownV2",
+        parse_mode: Literal["MarkdownV2", "Markdown", "HTML"] = "HTML",
     ):
         self._token: str = token
         self._batch_size: int = batch_size

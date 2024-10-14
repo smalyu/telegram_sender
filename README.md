@@ -112,7 +112,7 @@ async def main():
     # Prepare the data
     text = "Check out this <b>beautiful</b> photo!"
     media_items = [
-        Photo(media="PHOTO_FILE_ID")  # Single photo
+        Photo("PHOTO_FILE_ID")  # Single photo
     ]
     reply_markup = {
         "inline_keyboard": [
@@ -154,9 +154,9 @@ async def main():
     # Prepare the data
     text = "Here are some highlights from our latest event!"
     media_items = [
-        Photo(media="PHOTO_FILE_ID_1"),
-        Video(media="VIDEO_FILE_ID_1"),
-        Photo(media="PHOTO_FILE_ID_2"),
+        Photo("PHOTO_FILE_ID_1"),
+        Video("VIDEO_FILE_ID_1"),
+        Photo("PHOTO_FILE_ID_2"),
     ]
 
     # Note: reply_markup is not supported with sendMediaGroup
@@ -201,7 +201,7 @@ async def main():
     # Prepare the data
     text = "*Watch* this exciting video!"
     media_items = [
-        Video(media="VIDEO_FILE_ID")  # Single video
+        Video("VIDEO_FILE_ID")  # Single video
     ]
     reply_markup = {
         "inline_keyboard": [

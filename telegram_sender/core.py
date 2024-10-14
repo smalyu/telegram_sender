@@ -22,15 +22,15 @@ class MediaItem(BaseModel):
 class Photo(MediaItem):
     type: Literal["photo"] = "photo"
 
-    def __init__(self, media: str):
-        super().__init__(media=media, type="photo")
+    def __init__(self, file_id: str):
+        super().__init__(media=file_id, type="photo")
 
 
 class Video(MediaItem):
     type: Literal["video"] = "video"
 
-    def __init__(self, media: str):
-        super().__init__(media=media, type="video")
+    def __init__(self, file_id: str):
+        super().__init__(media=file_id, type="video")
 
 
 class TelegramSender:

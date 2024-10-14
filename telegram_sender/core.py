@@ -2,9 +2,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Literal, Generator, TypedDict
+from typing import TYPE_CHECKING, Literal, Generator
 
 from aiohttp import ClientSession
+from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,12 +14,26 @@ if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection
 
 
-class MediaItem(TypedDict):
+class MediaItem(BaseModel):
     type: Literal["photo", "video"]
     media: str
 
 
-class SenderMessages:
+class Photo(MediaItem):
+    type: Literal["photo"] = "photo"
+
+    def __init__(self, media: str):
+        super().__init__(media=media, type="photo")
+
+
+class Video(MediaItem):
+    type: Literal["video"] = "video"
+
+    def __init__(self, media: str):
+        super().__init__(media=media, type="video")
+
+
+class TelegramSender:
     _url_template: str = "https://api.telegram.org/bot{token}/{method}"
     _SUPPORTED_MEDIA_TYPES = {"photo", "video"}
 
@@ -54,14 +69,12 @@ class SenderMessages:
         if media_items is None:
             media_items = []
 
-        media_items = self._validate_media_items(media_items)
-
         if len(media_items) > 1:
             self._method = "sendMediaGroup"
         elif len(media_items) == 1:
-            if media_items[0]['type'] == 'photo':
+            if media_items[0].type == "photo":
                 self._method = "sendPhoto"
-            elif media_items[0]['type'] == 'video':
+            elif media_items[0].type == "video":
                 self._method = "sendVideo"
         else:
             self._method = "sendMessage"
@@ -78,14 +91,6 @@ class SenderMessages:
                 self._mongo_collection = client[self._mongo_db][collection_name]
             return await self._send_messages(data, chat_ids)
 
-    def _validate_media_items(self, media_items: list[MediaItem]) -> list[MediaItem]:
-        """Validates the media items and throws an error if any contain unsupported media types."""
-        for item in media_items:
-            if item['type'] not in self._SUPPORTED_MEDIA_TYPES:
-                raise ValueError(f"Unsupported media type: {item['type']} - "
-                                 f"Allowed types are: {self._SUPPORTED_MEDIA_TYPES}")
-        return media_items
-
     def _prepare_data(
         self,
         text: str,
@@ -94,14 +99,19 @@ class SenderMessages:
     ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
-            media_items[0]["caption"] = text  # type: ignore
-            media_items[0]["parse_mode"] = self._parse_mode  # type: ignore
-            data = {"media": json.dumps(media_items)}
+            media_group = []
+            for index, item in enumerate(media_items):
+                media_dict = item.dict()
+                if index == 0:
+                    media_dict["caption"] = text
+                    media_dict["parse_mode"] = self._parse_mode
+                media_group.append(media_dict)
+            data = {"media": json.dumps(media_group)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
         elif self._method == "sendPhoto":
             data = {
-                "photo": media_items[0]['media'],
+                "photo": media_items[0].media,
                 "caption": text,
                 "parse_mode": self._parse_mode,
             }
@@ -109,7 +119,7 @@ class SenderMessages:
                 data["reply_markup"] = json.dumps(reply_markup)
         elif self._method == "sendVideo":
             data = {
-                "video": media_items[0]['media'],
+                "video": media_items[0].media,
                 "caption": text,
                 "parse_mode": self._parse_mode,
             }

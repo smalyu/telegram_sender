@@ -35,7 +35,7 @@ Make sure you have Python 3.10 or higher installed.
 
 **telegram_sender** operates by:
 
-1. **Preparing Message Data**: It formats the message content, including text, single or multiple photos and videos (in any order), and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
+1. **Preparing Message Data**: It formats the message content, including text, photos, and videos (single or multiple, in any order), and optional reply markups, in a way that is compatible with the Telegram Bot API. You can also specify the `parse_mode` (e.g., `HTML`, `Markdown`) when initializing the class to control how text is parsed by Telegram.
 
 2. **Batching Requests**: To avoid exceeding Telegram's rate limits and to improve performance, it divides the list of recipient chat IDs into batches. Each batch contains a specified number of messages (`batch_size`).
 
@@ -63,11 +63,11 @@ This example demonstrates how to send a simple text message to multiple users.
 
 ```python
 import asyncio
-from telegram_sender import SenderMessages
+from telegram_sender import TelegramSender
 
 async def main():
     # Initialize the message sender
-    sender = SenderMessages(
+    sender = TelegramSender(
         token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=30,  # Increased batch size to 30 messages concurrently
         delay_between_batches=1.5,  # 1.5-second delay between batches
@@ -97,11 +97,11 @@ This example shows how to send a single photo with a caption and inline buttons.
 
 ```python
 import asyncio
-from telegram_sender import SenderMessages
+from telegram_sender import TelegramSender, Photo
 
 async def main():
     # Initialize the message sender
-    sender = SenderMessages(
+    sender = TelegramSender(
         token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=20,  # Send 20 messages concurrently
         delay_between_batches=2.0,  # 2-second delay between batches
@@ -112,7 +112,7 @@ async def main():
     # Prepare the data
     text = "Check out this <b>beautiful</b> photo!"
     media_items = [
-        {"type": "photo", "media": "PHOTO_FILE_ID"}  # Single photo
+        Photo(media="PHOTO_FILE_ID")  # Single photo
     ]
     reply_markup = {
         "inline_keyboard": [
@@ -140,11 +140,11 @@ This example demonstrates how to send multiple photos and videos in a single mes
 
 ```python
 import asyncio
-from telegram_sender import SenderMessages
+from telegram_sender import TelegramSender, Photo, Video
 
 async def main():
     # Initialize the message sender
-    sender = SenderMessages(
+    sender = TelegramSender(
         token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=2,  # Send 2 messages concurrently
         delay_between_batches=1.5,  # 1.5-second delay between batches
@@ -154,9 +154,9 @@ async def main():
     # Prepare the data
     text = "Here are some highlights from our latest event!"
     media_items = [
-        {"type": "photo", "media": "PHOTO_FILE_ID_1"},
-        {"type": "video", "media": "VIDEO_FILE_ID_1"},
-        {"type": "photo", "media": "PHOTO_FILE_ID_2"},
+        Photo(media="PHOTO_FILE_ID_1"),
+        Video(media="VIDEO_FILE_ID_1"),
+        Photo(media="PHOTO_FILE_ID_2"),
     ]
 
     # Note: reply_markup is not supported with sendMediaGroup
@@ -178,7 +178,7 @@ asyncio.run(main())
 **Important Notes:**
 
 - When sending multiple media files using `sendMediaGroup`, the `reply_markup` parameter (e.g., inline keyboards) is **not supported** by the Telegram API. If you need to include buttons, consider sending them in a separate message after the media group.
-- The `media_items` list allows you to mix photos and videos in any order. Each item is a dictionary with keys `'type'` and `'media'`, where `'type'` can be `'photo'` or `'video'`.
+- The `media_items` list allows you to mix photos and videos in any order. Each item is an instance of `Photo` or `Video`.
 
 ### Example 4 - Sending a Single Video with Text and Buttons
 
@@ -186,11 +186,11 @@ This example shows how to send a single video with a caption and inline buttons.
 
 ```python
 import asyncio
-from telegram_sender import SenderMessages
+from telegram_sender import TelegramSender, Video
 
 async def main():
     # Initialize the message sender
-    sender = SenderMessages(
+    sender = TelegramSender(
         token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=10,  # Send 10 messages concurrently
         delay_between_batches=1.0,  # 1-second delay between batches
@@ -201,7 +201,7 @@ async def main():
     # Prepare the data
     text = "*Watch* this exciting video!"
     media_items = [
-        {"type": "video", "media": "VIDEO_FILE_ID"}  # Single video
+        Video(media="VIDEO_FILE_ID")  # Single video
     ]
     reply_markup = {
         "inline_keyboard": [
@@ -229,11 +229,11 @@ This example demonstrates how to enable MongoDB logging to keep records of sent 
 
 ```python
 import asyncio
-from telegram_sender import SenderMessages
+from telegram_sender import TelegramSender
 
 async def main():
     # Initialize the message sender with MongoDB logging
-    sender = SenderMessages(
+    sender = TelegramSender(
         token="YOUR_TELEGRAM_BOT_TOKEN",
         batch_size=10,  # Batch size of 10 messages
         delay_between_batches=1.0,  # 1-second delay between batches
@@ -288,8 +288,12 @@ def get_media_token(bot_token: str, media_path: str, chat_id: int, media_type: s
             files={media_type: media_file},
             data={"chat_id": chat_id}
         )
+        response_data = response.json()
+        if not response_data.get("ok"):
+            raise Exception(f"Error sending media: {response_data}")
+        result = response_data["result"]
         media_key = "photo" if media_type == "photo" else "video"
-        media = response.json()["result"][media_key]
+        media = result[media_key]
         if isinstance(media, list):
             return media[-1]["file_id"]
         else:

@@ -82,7 +82,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids)
+    delivered, not_delivered = await sender.run(chat_ids, text=text)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -125,7 +125,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items, reply_markup=reply_markup)
+    delivered, not_delivered = await sender.run(chat_ids, text=text, media_items=media_items, reply_markup=reply_markup)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -166,7 +166,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items)
+    delivered, not_delivered = await sender.run(chat_ids, text=text, media_items=media_items)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -214,7 +214,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids, media_items=media_items, reply_markup=reply_markup)
+    delivered, not_delivered = await sender.run(chat_ids, text=text, media_items=media_items, reply_markup=reply_markup)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
@@ -249,7 +249,7 @@ async def main():
     chat_ids = [123456789, 987654321, 456123789]
 
     # Start the message sending process
-    delivered, not_delivered = await sender.run(text, chat_ids)
+    delivered, not_delivered = await sender.run(chat_ids, text=text)
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")

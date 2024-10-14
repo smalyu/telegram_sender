@@ -35,7 +35,6 @@ class Video(MediaItem):
 
 class TelegramSender:
     _url_template: str = "https://api.telegram.org/bot{token}/{method}"
-    _SUPPORTED_MEDIA_TYPES = {"photo", "video"}
 
     def __init__(
         self,

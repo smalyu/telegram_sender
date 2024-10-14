@@ -61,7 +61,7 @@ class TelegramSender:
     async def run(
         self,
         chat_ids: list[int],
-        text: str = '',
+        text: str = "",
         media_items: list[MediaItem] | None = None,
         reply_markup: dict | None = None,
     ) -> tuple[int, int]:

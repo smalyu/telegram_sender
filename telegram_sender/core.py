@@ -100,7 +100,7 @@ class TelegramSender:
         media_items: list[MediaItem],
         reply_markup: dict | None,
         disable_web_page_preview: bool,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
             media_group = []
@@ -110,7 +110,7 @@ class TelegramSender:
                     media_dict["caption"] = text
                     media_dict["parse_mode"] = self._parse_mode
                 media_group.append(media_dict)
-            data = {"media": json.dumps(media_group)}
+            data: dict[str, Any] = {"media": json.dumps(media_group)}
             if reply_markup:
                 logger.warning("reply_markup is not supported in sendMediaGroup")
         elif self._method == "sendPhoto":

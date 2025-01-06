@@ -66,6 +66,7 @@ class TelegramSender:
         text: str = "",
         media_items: list[MediaItem] | None = None,
         reply_markup: dict | None = None,
+        disable_web_page_preview: bool = False
     ) -> tuple[int, int]:
         """Runs the sending process and returns (delivered, not_delivered)."""
         if media_items is None:
@@ -82,7 +83,7 @@ class TelegramSender:
             self._method = "sendMessage"
 
         self._url = self._url_template.format(token=self._token, method=self._method)
-        data = self._prepare_data(text, media_items, reply_markup)
+        data = self._prepare_data(text, media_items, reply_markup, disable_web_page_preview)
 
         async with ClientSession() as self._session:
             if self._use_mongo:
@@ -98,6 +99,7 @@ class TelegramSender:
         text: str,
         media_items: list[MediaItem],
         reply_markup: dict | None,
+        disable_web_page_preview: bool,
     ) -> dict:
         """Prepares data for sending based on the method."""
         if self._method == "sendMediaGroup":
@@ -128,7 +130,11 @@ class TelegramSender:
             if reply_markup:
                 data["reply_markup"] = json.dumps(reply_markup)
         else:  # sendMessage
-            data = {"text": text, "parse_mode": self._parse_mode}
+            data = {
+                "text": text,
+                "parse_mode": self._parse_mode,
+                "disable_web_page_preview": disable_web_page_preview
+            }
             if reply_markup:
                 data["reply_markup"] = json.dumps(reply_markup)
         return data

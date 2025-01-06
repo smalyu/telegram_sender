@@ -14,6 +14,7 @@
   - [Example 3 - Sending Multiple Photos and Videos in Any Order](#example-3---sending-multiple-photos-and-videos-in-any-order)
   - [Example 4 - Sending a Single Video with Text and Buttons](#example-4---sending-a-single-video-with-text-and-buttons)
   - [Example 5 - Logging Messages in MongoDB](#example-5---logging-messages-in-mongodb)
+  - [Example 6 - Disabling Web Page Preview](#example-6---disabling-web-page-preview)
 - [Getting Started](#getting-started)
 - [How to Obtain Media File IDs](#how-to-obtain-media-file-ids)
 
@@ -250,6 +251,44 @@ async def main():
 
     # Start the message sending process
     delivered, not_delivered = await sender.run(chat_ids, text=text)
+
+    # Output statistics
+    print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")
+
+# Run the asynchronous task
+asyncio.run(main())
+```
+
+### Example 6 - Disabling Web Page Preview
+
+This example demonstrates how to disable link previews when sending a text message with `sendMessage`.
+
+```python
+import asyncio
+from telegram_sender import TelegramSender
+
+async def main():
+    # Initialize the message sender
+    sender = TelegramSender(
+        token="YOUR_TELEGRAM_BOT_TOKEN",
+        batch_size=30,  # Increased batch size to 30 messages concurrently
+        delay_between_batches=1.5,  # 1.5-second delay between batches
+        use_mongo=False,  # No MongoDB logging
+        parse_mode="Markdown"  # Setting parse_mode to Markdown
+    )
+
+    # Message text
+    text = "*Hello!* Here is a link: https://example.com"
+
+    # List of chat IDs
+    chat_ids = [123456789, 987654321, 456123789]
+
+    # Start the message sending process
+    delivered, not_delivered = await sender.run(
+        chat_ids, 
+        text=text,
+        disable_web_page_preview=True  # Parameter to disable previews
+    )
 
     # Output statistics
     print(f"Successfully sent: {delivered}, Failed to send: {not_delivered}")

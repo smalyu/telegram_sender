@@ -43,7 +43,7 @@ Make sure you have Python 3.10 or higher installed.
 
 4. **Delay Between Batches**: After sending a batch, it waits for a specified delay (`delay_between_batches`) before sending the next one. This delay helps comply with Telegram's rate limits and prevents server overload.
 
-5. **Error Handling**: If a message fails to send, the error is logged using Python's `logging` module. The process continues with the next messages without interruption.
+5. **Error Handling**: If a message fails to send, the error is logged using Python's `logging` module. The process continues with the next messages without interruption. **If the error code is `429 Too Many Requests`, the library automatically pauses for the required `retry_after` interval and re-sends those messages exactly once.**
 
 6. **MongoDB Logging (Optional)**: If enabled, the results of each message send operation are stored in a MongoDB collection. This feature is useful for auditing, analytics, or retry mechanisms.
 
@@ -51,7 +51,7 @@ Make sure you have Python 3.10 or higher installed.
 
 - **Asynchronous Processing**: Utilizes `asyncio` and `aiohttp` for non-blocking operations, making it efficient for high-volume message sending.
 - **Batch Management**: Sends messages in configurable batches to optimize performance and comply with rate limits.
-- **Error Resilience**: Continues sending messages even if some fail, and logs errors for later review.
+- **Error Resilience**: Continues sending messages even if some fail, and logs errors for later review. **For `429 Too Many Requests`, it automatically re-sends after the required pause.**
 - **Configurable**: Offers flexibility through parameters such as batch size, delay intervals, parse mode, and MongoDB settings.
 - **Optional Logging**: Allows enabling or disabling MongoDB logging based on your needs.
 

@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Literal, Generator, Coroutine, Any
 from aiohttp import ClientSession
 from pydantic import BaseModel
 
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 if TYPE_CHECKING:
     from motor.motor_asyncio import AsyncIOMotorCollection

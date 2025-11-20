@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telegram_sender"
-version = "1.5.1"
+version = "1.6.0"
 description = 'Asynchronous Python tool for efficiently sending messages and photos to multiple Telegram users with optional MongoDB logging.'
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ authors = [
 
 dependencies = [
     "aiohttp>=3,<4",
-    "motor>=3,<4",
+    "pymongo>=4.6,<5",
     "pydantic>=2,<3"
 ]
 

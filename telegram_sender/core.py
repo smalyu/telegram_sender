@@ -5,13 +5,14 @@ import time
 from typing import TYPE_CHECKING, Literal, Generator, Coroutine, Any
 
 from aiohttp import ClientSession
+from pymongo import AsyncMongoClient
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 if TYPE_CHECKING:
-    from motor.motor_asyncio import AsyncIOMotorCollection
+    from pymongo.asynchronous.collection import AsyncCollection
 
 
 class MediaItem(BaseModel):
@@ -53,8 +54,10 @@ class TelegramSender:
         self._mongo_uri: str = mongo_uri
         self._mongo_db: str = mongo_db
         self._parse_mode: str = parse_mode
-        self._mongo_collection: AsyncIOMotorCollection | None = None
-        self._method: Literal["sendMessage", "sendPhoto", "sendVideo", "sendMediaGroup"] = "sendMessage"
+        self._mongo_collection: AsyncCollection | None = None
+        self._method: Literal[
+            "sendMessage", "sendPhoto", "sendVideo", "sendMediaGroup"
+        ] = "sendMessage"
         self._url: str = ""
 
         self._rate_limited_messages: list[dict] = []
@@ -66,7 +69,7 @@ class TelegramSender:
         text: str = "",
         media_items: list[MediaItem] | None = None,
         reply_markup: dict | None = None,
-        disable_web_page_preview: bool = False
+        disable_web_page_preview: bool = False,
     ) -> tuple[int, int]:
         """Runs the sending process and returns (delivered, not_delivered)."""
         if media_items is None:
@@ -83,13 +86,13 @@ class TelegramSender:
             self._method = "sendMessage"
 
         self._url = self._url_template.format(token=self._token, method=self._method)
-        data = self._prepare_data(text, media_items, reply_markup, disable_web_page_preview)
+        data = self._prepare_data(
+            text, media_items, reply_markup, disable_web_page_preview
+        )
 
         async with ClientSession() as self._session:
             if self._use_mongo:
-                from motor.motor_asyncio import AsyncIOMotorClient
-
-                client: AsyncIOMotorClient = AsyncIOMotorClient(self._mongo_uri)
+                client: AsyncMongoClient = AsyncMongoClient(self._mongo_uri)
                 collection_name = self._get_collection_name()
                 self._mongo_collection = client[self._mongo_db][collection_name]
             return await self._send_messages(data, chat_ids)
@@ -133,7 +136,7 @@ class TelegramSender:
             data = {
                 "text": text,
                 "parse_mode": self._parse_mode,
-                "disable_web_page_preview": disable_web_page_preview
+                "disable_web_page_preview": disable_web_page_preview,
             }
             if reply_markup:
                 data["reply_markup"] = json.dumps(reply_markup)
@@ -149,7 +152,9 @@ class TelegramSender:
         batches = self._create_send_batches(data, chat_ids)
         return await self._execute_batches(batches)
 
-    def _create_send_batches(self, data: dict, chat_ids: list[int]) -> Generator[list, None, None]:
+    def _create_send_batches(
+        self, data: dict, chat_ids: list[int]
+    ) -> Generator[list, None, None]:
         """Yields batches of _send_message coroutines."""
         batch = []
         for chat_id in chat_ids:
@@ -177,10 +182,16 @@ class TelegramSender:
             if response.status != 200:
                 error_code = response_json.get("error_code")
                 if error_code == 429:
-                    retry_after = response_json.get("parameters", {}).get("retry_after", 0)
-                    logger.error(f"429 for chat_id={data['chat_id']}, retry_after={retry_after}")
+                    retry_after = response_json.get("parameters", {}).get(
+                        "retry_after", 0
+                    )
+                    logger.error(
+                        f"429 for chat_id={data['chat_id']}, retry_after={retry_after}"
+                    )
                     self._rate_limited_messages.append(data)
-                    self._global_retry_after = max(self._global_retry_after, retry_after)
+                    self._global_retry_after = max(
+                        self._global_retry_after, retry_after
+                    )
                     return False, True
                 else:
                     logger.error(f"Failed for {data['chat_id']}: {response_json}")
@@ -192,7 +203,9 @@ class TelegramSender:
             logger.exception(f"Exception for {data['chat_id']}: {e}")
             return False, False
 
-    async def _process_batch_messages(self, batch: list[Coroutine[Any, Any, tuple[bool, bool]]]) -> tuple[int, int]:
+    async def _process_batch_messages(
+        self, batch: list[Coroutine[Any, Any, tuple[bool, bool]]]
+    ) -> tuple[int, int]:
         """Processes a batch with as_completed. Returns (delivered, non_429_failures)."""
         delivered, non_429_failures = 0, 0
         for future in asyncio.as_completed(batch):
@@ -212,7 +225,9 @@ class TelegramSender:
         if not self._rate_limited_messages:
             return 0, 0
 
-        logger.info(f"Re-sending {len(self._rate_limited_messages)} rate-limited messages")
+        logger.info(
+            f"Re-sending {len(self._rate_limited_messages)} rate-limited messages"
+        )
         msgs_to_retry = self._rate_limited_messages.copy()
         self._rate_limited_messages.clear()
 
@@ -224,7 +239,9 @@ class TelegramSender:
         self._rate_limited_messages.clear()
         return delivered, not_delivered
 
-    async def _execute_batches(self, batches: Generator[list, None, None]) -> tuple[int, int]:
+    async def _execute_batches(
+        self, batches: Generator[list, None, None]
+    ) -> tuple[int, int]:
         """
         Executes batches, handles 429 with a pause, and returns (delivered, not_delivered).
         """
@@ -242,7 +259,9 @@ class TelegramSender:
             total_not_delivered += nd
 
             if self._global_retry_after > 0:
-                logger.info(f"Pausing {self._global_retry_after}s due to 429 in batch #{batch_index}")
+                logger.info(
+                    f"Pausing {self._global_retry_after}s due to 429 in batch #{batch_index}"
+                )
                 await asyncio.sleep(self._global_retry_after)
                 self._global_retry_after = 0.0
 
@@ -250,5 +269,7 @@ class TelegramSender:
                 total_delivered += d2
                 total_not_delivered += nd2
 
-            sleep_time = max(batch_start_time + self._delay_between_batches - time.monotonic(), 0.0)
+            sleep_time = max(
+                batch_start_time + self._delay_between_batches - time.monotonic(), 0.0
+            )
         return total_delivered, total_not_delivered
